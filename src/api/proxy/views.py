@@ -1,7 +1,5 @@
 import asyncio
-import os
 from collections.abc import Awaitable, Mapping
-from pathlib import Path
 from typing import TypeAlias, TypeVar
 
 import httpx
@@ -10,8 +8,8 @@ from httpx import Response as HTTPXResponse
 
 from src.api import exceptions
 from src.api.deps import HttpClientDeps
-from src.config import config
 
+from .deps import HeadersDeps, ProxyPathDeps, ServiceConfigDeps
 from .schemas import (
     ProxyBatchRequest,
     ProxyBatchResponse,
@@ -25,26 +23,6 @@ router = APIRouter()
 T = TypeVar("T")
 
 QueryParams: TypeAlias = Mapping[str, str]
-
-
-def _resolve_url(path: str, query_params: QueryParams | None = None) -> httpx.URL:
-    _, _, service_name, *parts = Path(path).parts
-    service = config.get_service(service_name)
-    assert service is not None, f"Unknown service: {service_name}"
-    path = os.path.join(*parts or [""])
-    url = httpx.URL(f"{service.host}/{path}")
-    if query_params:
-        return url.copy_merge_params(query_params)
-    return url
-
-
-def _make_headers(request: Request) -> Mapping[str, str]:
-    headers = request.headers.mutablecopy()
-    headers["x-forwarded-host"] = headers["host"]
-    del headers["host"]
-    if request.client:
-        headers["x-forwarded-for"] = request.client.host
-    return headers
 
 
 async def _reraise_httpx_errors(coro: Awaitable[T]) -> T:
@@ -65,10 +43,21 @@ async def _return_exceptions(coro: Awaitable[T]) -> T | exceptions.APIError:
         return exc
 
 
-async def proxy(request: Request, http_client: HttpClientDeps):
+def _make_proxy_url(base_url: str, path: str) -> str:
+    if not base_url.endswith("/") and not path.startswith("/"):
+        return f"{base_url}/{path}"
+    return f"{base_url}{path}"
+
+
+async def proxy(
+    request: Request,
+    http_client: HttpClientDeps,
+    service: ServiceConfigDeps,
+    headers: HeadersDeps,
+    proxy_path: ProxyPathDeps,
+):
     """Proxies a request to a given service."""
-    url = _resolve_url(request.url.path, query_params=request.query_params)
-    headers = _make_headers(request)
+    url = _make_proxy_url(str(service.host), proxy_path)
 
     response = await _reraise_httpx_errors(
         http_client.request(
@@ -76,7 +65,8 @@ async def proxy(request: Request, http_client: HttpClientDeps):
             url=url,
             headers=headers,
             content=await request.body(),
-            # TODO: timeout
+            timeout=service.timeout,
+            follow_redirects=True,
         )
     )
 
@@ -89,16 +79,12 @@ async def proxy(request: Request, http_client: HttpClientDeps):
 
 
 async def proxy_batch(
-    request: Request,
     payload: ProxyBatchRequest,
     http_client: HttpClientDeps,
+    service: ServiceConfigDeps,
+    headers: HeadersDeps,
 ):
     """Aggregates multiple calls to the proxy API in a single call."""
-    _, _, service_name, *_ = Path(request.url.path).parts
-    service = config.get_service(service_name)
-    assert service is not None, f"Unknown service: {service_name}"
-    headers = _make_headers(request)
-
     tasks = {}
     async with asyncio.TaskGroup() as tg:
         for item in payload.items:
@@ -106,8 +92,9 @@ async def proxy_batch(
                 _return_exceptions(
                     http_client.request(
                         method=str(item.method),
-                        url=httpx.URL(f"{service.host}{item.path}"),
+                        url=_make_proxy_url(str(service.host), item.path),
                         headers=headers,
+                        timeout=service.timeout,
                     )
                 )
             )

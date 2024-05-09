@@ -14,6 +14,7 @@ class CORSConfig(BaseModel):
 class ServiceConfig(BaseModel):
     name: str
     host: AnyHttpUrl
+    timeout: float = 5.0
 
 
 class AppConfig(BaseSettings):
