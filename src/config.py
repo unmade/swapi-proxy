@@ -25,9 +25,17 @@ class AppConfig(BaseSettings):
     services: list[ServiceConfig] = [
         ServiceConfig(
             name="swapi",
-            host=Url("https://swapi.dev/api/"),
+            host=Url("https://swapi.dev/api"),
         )
     ]
+    _service_map: dict[str, ServiceConfig]
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._service_map = {service.name: service for service in self.services}
+
+    def get_service(self, name: str) -> ServiceConfig | None:
+        return self._service_map.get(name)
 
 
 config = AppConfig()
