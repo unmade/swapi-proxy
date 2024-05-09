@@ -31,10 +31,28 @@ class ProxyBatchRequest(BaseModel):
         return self
 
 
+class ProxyBatchResponseItemResult(BaseModel):
+    status_code: int
+    content: dict[str, Any] | str | bytes
+
+
+class ProxyBatchResponseItemError(BaseModel):
+    code: str
+    title: str
+    description: str
+
+
 class ProxyBatchResponseItem(BaseModel):
     path: str
-    status_code: int
-    result: dict[str, Any] | str | bytes
+    result: ProxyBatchResponseItemResult | None = None
+    error: ProxyBatchResponseItemError | None = None
+
+    @model_validator(mode="after")
+    def validate_either_result_or_error_is_set(self) -> Self:
+        assert (
+            self.result and not self.error or not self.result and self.error
+        ), "Can't have both `error` and `result`"
+        return self
 
 
 class ProxyBatchResponse(BaseModel):

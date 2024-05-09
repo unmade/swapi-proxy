@@ -7,6 +7,7 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.exceptions import APIError, api_error_exception_handler
 from src.config import config
 
 from . import proxy, router
@@ -43,6 +44,8 @@ def create_app() -> FastAPI:
         allow_methods=config.cors.allowed_methods,
         allow_headers=config.cors.allowed_headers,
     )
+
+    app.add_exception_handler(APIError, api_error_exception_handler)
 
     app.include_router(router)
     proxy.setup(app, config.services)

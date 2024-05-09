@@ -16,9 +16,12 @@ def setup(app: FastAPI, services: list[ServiceConfig]) -> None:
     for service in services:
         service_router = APIRouter(tags=[service.name])
         service_router.add_api_route(
-            f"/proxy/{service.name}/{{path:path}}", views.proxy
+            f"/proxy/{service.name}/{{path:path}}",
+            views.proxy,
         )
         service_router.add_api_route(
-            f"/proxy_batch/{service.name}", views.proxy_batch, methods=["POST"]
+            f"/proxy_batch/{service.name}",
+            views.proxy_batch,
+            methods=["POST"],
         )
     app.include_router(service_router)
