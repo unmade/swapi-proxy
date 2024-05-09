@@ -1,0 +1,18 @@
+line-length = 88
+
+target-version = "py312"
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+]
+
+[lint.isort]
+known-first-party=["src"]

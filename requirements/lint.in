@@ -1,0 +1,10 @@
+-c base.txt
+-c test.txt
+
+mypy>=1.10,<2
+pre-commit>=3.7,<4
+
+# the following dependencies are required by mypy
+fastapi
+pydantic
+pydantic-settings

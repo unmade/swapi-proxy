@@ -1,0 +1,19 @@
+[paths]
+source =
+   src
+
+[run]
+branch = true
+source =
+    src
+    tests
+
+[report]
+precision = 2
+show_missing = true
+exclude_lines =
+    pragma: no cover
+    TYPE_CHECKING
+    @overload
+    from __future__ import annotations
+    assert_never

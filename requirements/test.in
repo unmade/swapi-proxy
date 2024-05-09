@@ -1,0 +1,5 @@
+-c base.txt
+
+anyio  # restricted by fastapi and other
+pytest>=8.2,<9
+pytest-cov>=5,<6
