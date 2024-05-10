@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pydantic import AnyHttpUrl, AnyUrl, BaseModel
-from pydantic_core import Url
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,12 +29,7 @@ class AppConfig(BaseSettings):
     app_debug: bool = False
 
     cors: CORSConfig = CORSConfig()
-    services: list[ServiceConfig] = [
-        ServiceConfig(
-            name="swapi",
-            host=Url("https://swapi.dev/api"),
-        )
-    ]
+    services: list[ServiceConfig]
     limiter: RateLimiterConfig = RateLimiterConfig()
 
     _service_map: dict[str, ServiceConfig]
