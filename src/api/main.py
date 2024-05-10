@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.exceptions import APIError, api_error_exception_handler
 from src.config import config
+from src.toolkit.rate_limit import RateLimiter
 
 from . import proxy, router
 
@@ -20,13 +21,18 @@ if TYPE_CHECKING:
 
 class State(TypedDict):
     http_client: AsyncClient
+    limiter: RateLimiter
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[State]:
-    async with httpx.AsyncClient() as http_client:
+    async with (
+        httpx.AsyncClient() as http_client,
+        RateLimiter(config.limiter) as limiter,
+    ):
         yield {
             "http_client": http_client,
+            "limiter": limiter,
         }
 
 

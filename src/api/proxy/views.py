@@ -7,9 +7,9 @@ from fastapi import APIRouter, Request, Response
 from httpx import Response as HTTPXResponse
 
 from src.api import exceptions
-from src.api.deps import HttpClientDeps
+from src.api.deps import HttpClientDeps, LimiterDeps
 
-from .deps import HeadersDeps, ProxyPathDeps, ServiceConfigDeps
+from .deps import HeadersDeps, LimiterKeyDeps, ProxyPathDeps, ServiceConfigDeps
 from .schemas import (
     ProxyBatchRequest,
     ProxyBatchResponse,
@@ -52,12 +52,19 @@ def _make_proxy_url(base_url: str, path: str) -> str:
 async def proxy(
     request: Request,
     http_client: HttpClientDeps,
+    limiter: LimiterDeps,
+    limiter_key: LimiterKeyDeps,
     service: ServiceConfigDeps,
     headers: HeadersDeps,
     proxy_path: ProxyPathDeps,
 ):
     """Proxies a request to a given service."""
     url = _make_proxy_url(str(service.host), proxy_path)
+    await limiter.limit(
+        key=limiter_key,
+        limit=service.rate_limit,
+        limit_period=service.rate_limit_period,
+    )
 
     response = await _reraise_httpx_errors(
         http_client.request(
@@ -81,10 +88,19 @@ async def proxy(
 async def proxy_batch(
     payload: ProxyBatchRequest,
     http_client: HttpClientDeps,
+    limiter: LimiterDeps,
+    limiter_key: LimiterKeyDeps,
     service: ServiceConfigDeps,
     headers: HeadersDeps,
 ):
     """Aggregates multiple calls to the proxy API in a single call."""
+    await limiter.limit(
+        key=limiter_key,
+        limit=service.rate_limit,
+        limit_period=service.rate_limit_period,
+        cost=len(payload.items),
+    )
+
     tasks = {}
     async with asyncio.TaskGroup() as tg:
         for item in payload.items:

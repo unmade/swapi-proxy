@@ -8,3 +8,4 @@ pre-commit>=3.7,<4
 fastapi
 pydantic
 pydantic-settings
+redis

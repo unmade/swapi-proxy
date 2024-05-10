@@ -83,6 +83,7 @@ pyyaml==6.0.1
     # via
     #   pre-commit
     #   uvicorn
+redis==5.0.4
 rich==13.7.1
     # via typer
 setuptools==69.5.1

@@ -33,8 +33,3 @@ async def client(app: FastAPI) -> AsyncIterator[TestClient]:
     """Test client fixture to make requests against app endpoints."""
     async with TestClient(app=app, base_url="http://test") as cli:
         yield cli
-
-
-@pytest.fixture(scope="session")
-def anyio_backend() -> str:
-    return "asyncio"

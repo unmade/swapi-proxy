@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -9,6 +11,9 @@ from fastapi import Depends, Request
 from src.config import ServiceConfig, config
 
 __all__ = [
+    "HeadersDeps",
+    "LimiterKeyDeps",
+    "ProxyPathDeps",
     "ServiceConfigDeps",
 ]
 
@@ -16,9 +21,8 @@ __all__ = [
 def get_headers(request: Request) -> Mapping[str, str]:
     headers = request.headers.mutablecopy()
     headers["x-forwarded-host"] = headers["host"]
-    del headers["host"]
-    if request.client:
-        headers["x-forwarded-for"] = request.client.host
+    assert request.client is not None
+    headers["x-forwarded-for"] = request.client.host
     return headers
 
 
@@ -45,6 +49,12 @@ async def get_proxy_path(
     return path
 
 
+async def get_limiter_key(request: Request, service: ServiceConfigDeps) -> str:
+    assert request.client is not None, "Can't limit without client IP-address."
+    return f"{service.name}:{request.client.host}"
+
+
 HeadersDeps = Annotated[Mapping[str, str], Depends(get_headers)]
-ServiceConfigDeps = Annotated[ServiceConfig, Depends(get_service_config)]
+LimiterKeyDeps = Annotated[str, Depends(get_limiter_key)]
 ProxyPathDeps = Annotated[str, Depends(get_proxy_path)]
+ServiceConfigDeps = Annotated[ServiceConfig, Depends(get_service_config)]
