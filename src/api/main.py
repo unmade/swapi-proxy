@@ -7,9 +7,13 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.exceptions import APIError, api_error_exception_handler
+from src.api.exceptions import (
+    APIError,
+    api_error_exception_handler,
+    rate_limit_error_handler,
+)
 from src.config import config
-from src.toolkit.rate_limit import RateLimiter
+from src.toolkit.rate_limit import RateLimiter, RateLimitError
 
 from . import proxy, router
 
@@ -52,6 +56,7 @@ def create_app() -> FastAPI:
     )
 
     app.add_exception_handler(APIError, api_error_exception_handler)
+    app.add_exception_handler(RateLimitError, rate_limit_error_handler)
 
     app.include_router(router)
     proxy.setup(app, config.services)
