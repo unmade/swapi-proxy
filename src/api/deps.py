@@ -21,4 +21,4 @@ async def rate_limiter(request: Request):
 
 
 HttpClientDeps: TypeAlias = Annotated[AsyncClient, Depends(http_client)]
-LimiterDeps: TypeAlias = Annotated[RateLimiter, Depends(rate_limiter)]
+RateLimiterDeps: TypeAlias = Annotated[RateLimiter, Depends(rate_limiter)]

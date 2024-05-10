@@ -7,9 +7,15 @@ from fastapi import APIRouter, Request, Response
 from httpx import Response as HTTPXResponse
 
 from src.api import exceptions
-from src.api.deps import HttpClientDeps, LimiterDeps
+from src.api.deps import HttpClientDeps, RateLimiterDeps
 
-from .deps import HeadersDeps, LimiterKeyDeps, ProxyPathDeps, ServiceConfigDeps
+from .deps import (
+    ConcurrencyLimiterDeps,
+    HeadersDeps,
+    ProxyPathDeps,
+    RateLimiterKeyDeps,
+    ServiceConfigDeps,
+)
 from .schemas import (
     ProxyBatchRequest,
     ProxyBatchResponse,
@@ -52,8 +58,8 @@ def _make_proxy_url(base_url: str, path: str) -> str:
 async def proxy(
     request: Request,
     http_client: HttpClientDeps,
-    limiter: LimiterDeps,
-    limiter_key: LimiterKeyDeps,
+    limiter: RateLimiterDeps,
+    limiter_key: RateLimiterKeyDeps,
     service: ServiceConfigDeps,
     headers: HeadersDeps,
     proxy_path: ProxyPathDeps,
@@ -88,8 +94,9 @@ async def proxy(
 async def proxy_batch(
     payload: ProxyBatchRequest,
     http_client: HttpClientDeps,
-    limiter: LimiterDeps,
-    limiter_key: LimiterKeyDeps,
+    concurrency_limiter: ConcurrencyLimiterDeps,
+    limiter: RateLimiterDeps,
+    limiter_key: RateLimiterKeyDeps,
     service: ServiceConfigDeps,
     headers: HeadersDeps,
 ):
@@ -105,12 +112,14 @@ async def proxy_batch(
     async with asyncio.TaskGroup() as tg:
         for item in payload.items:
             tasks[item.path] = tg.create_task(
-                _return_exceptions(
-                    http_client.request(
-                        method=str(item.method),
-                        url=_make_proxy_url(str(service.host), item.path),
-                        headers=headers,
-                        timeout=service.timeout,
+                concurrency_limiter(
+                    _return_exceptions(
+                        http_client.request(
+                            method=str(item.method),
+                            url=_make_proxy_url(str(service.host), item.path),
+                            headers=headers,
+                            timeout=service.timeout,
+                        )
                     )
                 )
             )

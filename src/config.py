@@ -21,6 +21,7 @@ class ServiceConfig(BaseModel):
     timeout: float = 5.0
     rate_limit: int = 100
     rate_limit_period: int = 3600
+    max_concurrent_requests: int = 10
 
 
 class AppConfig(BaseSettings):

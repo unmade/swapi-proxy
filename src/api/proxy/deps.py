@@ -9,13 +9,26 @@ import httpx
 from fastapi import Depends, Request
 
 from src.config import ServiceConfig, config
+from src.toolkit.asyncio import ConcurrencyLimiter
 
 __all__ = [
+    "ConcurrencyLimiterDeps",
     "HeadersDeps",
-    "LimiterKeyDeps",
+    "RateLimiterKeyDeps",
     "ProxyPathDeps",
     "ServiceConfigDeps",
 ]
+
+_concurrency_limiters: dict[str, ConcurrencyLimiter] = {}
+
+
+async def get_concurrency_limiter(service: ServiceConfigDeps) -> ConcurrencyLimiter:
+    if limiter := _concurrency_limiters.get(service.name):
+        return limiter
+
+    limiter = ConcurrencyLimiter(service.max_concurrent_requests)
+    _concurrency_limiters[service.name] = limiter
+    return limiter
 
 
 def get_headers(request: Request) -> Mapping[str, str]:
@@ -54,7 +67,8 @@ async def get_limiter_key(request: Request, service: ServiceConfigDeps) -> str:
     return f"{service.name}:{request.client.host}"
 
 
+ConcurrencyLimiterDeps = Annotated[ConcurrencyLimiter, Depends(get_concurrency_limiter)]
 HeadersDeps = Annotated[Mapping[str, str], Depends(get_headers)]
-LimiterKeyDeps = Annotated[str, Depends(get_limiter_key)]
+RateLimiterKeyDeps = Annotated[str, Depends(get_limiter_key)]
 ProxyPathDeps = Annotated[str, Depends(get_proxy_path)]
 ServiceConfigDeps = Annotated[ServiceConfig, Depends(get_service_config)]
