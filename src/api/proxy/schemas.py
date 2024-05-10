@@ -3,7 +3,10 @@ from __future__ import annotations
 from http import HTTPMethod
 from typing import Annotated, Any, Literal, Self
 
+import httpx
 from pydantic import AfterValidator, BaseModel, model_validator
+
+from src.api.exceptions import APIError
 
 
 def _normalize_path(value: str) -> str:
@@ -46,6 +49,23 @@ class ProxyBatchResponseItem(BaseModel):
     path: str
     result: ProxyBatchResponseItemResult | None = None
     error: ProxyBatchResponseItemError | None = None
+
+    @classmethod
+    def from_result(cls, path: str, result: httpx.Response) -> Self:
+        return cls(
+            path=path,
+            result=ProxyBatchResponseItemResult(
+                status_code=result.status_code,
+                content=result.json(),
+            ),
+        )
+
+    @classmethod
+    def from_error(cls, path: str, error: APIError) -> Self:
+        return cls(
+            path=path,
+            error=ProxyBatchResponseItemError.model_validate(error.as_dict()),
+        )
 
     @model_validator(mode="after")
     def validate_either_result_or_error_is_set(self) -> Self:

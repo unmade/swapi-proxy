@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
     from src.config import ServiceConfig
 
+_METHODS = ["DELETE", "HEAD", "GET", "OPTIONS", "POST", "PATCH", "PUT", "TRACE"]
+
 
 def setup(app: FastAPI, services: list[ServiceConfig]) -> None:
     for service in services:
@@ -18,6 +20,7 @@ def setup(app: FastAPI, services: list[ServiceConfig]) -> None:
         service_router.add_api_route(
             f"/proxy/{service.name}/{{path:path}}",
             views.proxy,
+            methods=_METHODS,
         )
         service_router.add_api_route(
             f"/proxy_batch/{service.name}",

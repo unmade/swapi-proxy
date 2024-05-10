@@ -49,6 +49,17 @@ class TestProxy:
         assert response.status_code == 200
         assert response.json() == expected_response
 
+    async def test_proxy_with_body(self, client: TestClient, httpx_mock: HTTPXMock):
+        # GIVEN
+        proxy_url = "https://swapi.dev/api/films/1"
+        payload = {"released_date": "1977-05-26"}
+        httpx_mock.add_response(url=proxy_url, json=payload, match_json=payload)
+        # WHEN
+        response = await client.patch("/proxy/swapi/films/1", json=payload)
+        # THEN
+        assert response.status_code == 200
+        assert response.json() == payload
+
     @pytest.mark.parametrize(
         ["error", "expected_error"],
         [

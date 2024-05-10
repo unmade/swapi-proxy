@@ -4,7 +4,6 @@ from typing import TypeAlias, TypeVar
 
 import httpx
 from fastapi import APIRouter, Request, Response
-from httpx import Response as HTTPXResponse
 
 from src.api import exceptions
 from src.api.deps import HttpClientDeps, RateLimiterDeps
@@ -20,8 +19,6 @@ from .schemas import (
     ProxyBatchRequest,
     ProxyBatchResponse,
     ProxyBatchResponseItem,
-    ProxyBatchResponseItemError,
-    ProxyBatchResponseItemResult,
 )
 
 router = APIRouter()
@@ -29,6 +26,8 @@ router = APIRouter()
 T = TypeVar("T")
 
 QueryParams: TypeAlias = Mapping[str, str]
+
+_METHODS_WITH_BODY = ["patch", "post", "put"]
 
 
 async def _reraise_httpx_errors(coro: Awaitable[T]) -> T:
@@ -72,12 +71,16 @@ async def proxy(
         limit_period=service.rate_limit_period,
     )
 
+    content = None
+    if request.method.lower() in _METHODS_WITH_BODY:
+        content = await request.body()
+
     response = await _reraise_httpx_errors(
         http_client.request(
             method=request.method,
             url=url,
             headers=headers,
-            content=await request.body(),
+            content=content,
             timeout=service.timeout,
             follow_redirects=True,
         )
@@ -126,26 +129,11 @@ async def proxy_batch(
 
     items = []
     for path, task in tasks.items():
-        response_or_exc: HTTPXResponse | exceptions.APIError = task.result()
-
-        if isinstance(response_or_exc, HTTPXResponse):
-            items.append(
-                ProxyBatchResponseItem(
-                    path=path,
-                    result=ProxyBatchResponseItemResult(
-                        status_code=response_or_exc.status_code,
-                        content=response_or_exc.json(),
-                    ),
-                )
-            )
+        response_or_exc: httpx.Response | exceptions.APIError = task.result()
+        if isinstance(response_or_exc, httpx.Response):
+            schema = ProxyBatchResponseItem.from_result(path, response_or_exc)
         else:
-            items.append(
-                ProxyBatchResponseItem(
-                    path=path,
-                    error=ProxyBatchResponseItemError.model_validate(
-                        response_or_exc.as_dict()
-                    ),
-                )
-            )
+            schema = ProxyBatchResponseItem.from_error(path, response_or_exc)
+        items.append(schema)
 
     return ProxyBatchResponse(items=items)
