@@ -1,6 +1,22 @@
 services:
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
   redis:
     image: redis:alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: "redis-cli ping"
+      interval: 5s
+      timeout: 1s
+      retries: 1
