@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: api
+    environment:
+      - LIMITER__BACKEND_DSN=redis://redis:6379
     depends_on:
       redis:
         condition: service_healthy

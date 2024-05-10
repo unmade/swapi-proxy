@@ -18,7 +18,7 @@ class RateLimiterConfig(BaseModel):
 class ServiceConfig(BaseModel):
     name: str
     host: AnyHttpUrl
-    timeout: float = 5.0
+    timeout: float = 30.0
     rate_limit: int = 100
     rate_limit_period: int = 3600
     max_concurrent_requests: int = 10

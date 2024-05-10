@@ -36,6 +36,8 @@ def get_headers(request: Request) -> Mapping[str, str]:
     headers["x-forwarded-host"] = headers["host"]
     assert request.client is not None
     headers["x-forwarded-for"] = request.client.host
+    if "content-length" in headers:
+        del headers["Content-Length"]
     return headers
 
 
