@@ -73,7 +73,7 @@ async def proxy(
 
     content = None
     if request.method.lower() in _METHODS_WITH_BODY:
-        content = await request.body()
+        content = request.stream()
 
     response = await _reraise_httpx_errors(
         http_client.request(

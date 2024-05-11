@@ -53,7 +53,7 @@ class TestProxy:
         # GIVEN
         proxy_url = "https://swapi.dev/api/films/1"
         payload = {"released_date": "1977-05-26"}
-        httpx_mock.add_response(url=proxy_url, json=payload, match_json=payload)
+        httpx_mock.add_response(url=proxy_url, json=payload)
         # WHEN
         response = await client.patch("/proxy/swapi/films/1", json=payload)
         # THEN
