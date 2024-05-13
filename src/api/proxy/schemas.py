@@ -4,7 +4,7 @@ from http import HTTPMethod
 from typing import Annotated, Any, Literal, Self
 
 import httpx
-from pydantic import AfterValidator, BaseModel, model_validator
+from pydantic import AfterValidator, BaseModel, Field, model_validator
 
 from src.api.exceptions import APIError
 
@@ -22,7 +22,7 @@ class ProxyBatchItemSchema(BaseModel):
 
 
 class ProxyBatchRequest(BaseModel):
-    items: list[ProxyBatchItemSchema]
+    items: Annotated[list[ProxyBatchItemSchema], Field(max_length=20)]
 
     @model_validator(mode="after")
     def validate_path_are_unique(self) -> Self:
