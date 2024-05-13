@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: api
+    env_file:
+      - .env
     environment:
       - LIMITER__BACKEND_DSN=redis://redis:6379
     depends_on:
